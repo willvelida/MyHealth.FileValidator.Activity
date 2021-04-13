@@ -1,19 +1,19 @@
 // Default URL for triggering event grid function in the local environment.
 // http://localhost:7071/runtime/webhooks/EventGrid?functionName={functionname}
-using System;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Host;
-using Microsoft.Azure.EventGrid.Models;
-using Microsoft.Azure.WebJobs.Extensions.EventGrid;
-using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
-using Azure.Messaging.ServiceBus;
-using MyHealth.Common;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json.Linq;
-using System.IO;
 using CsvHelper;
+using Microsoft.Azure.EventGrid.Models;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.EventGrid;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MyHealth.Common;
+using MyHealth.FileValidator.Activity.Helpers;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Globalization;
+using System.IO;
+using System.Threading.Tasks;
 using mdl = MyHealth.Common.Models;
 
 namespace MyHealth.FileValidator.Activity.Functions
@@ -21,24 +21,24 @@ namespace MyHealth.FileValidator.Activity.Functions
     public class ValidateActivityFile
     {
         private readonly ILogger<ValidateActivityFile> _logger;
-        private readonly IConfiguration _configuration;
+        private readonly FunctionOptions _functionOptions;
         private readonly IServiceBusHelpers _serviceBusHelpers;
         private readonly IAzureBlobHelpers _azureBlobHelpers;
 
         public ValidateActivityFile(
             ILogger<ValidateActivityFile> logger,
-            IConfiguration configuration,
+            IOptions<FunctionOptions> options,
             IServiceBusHelpers serviceBusHelpers,
             IAzureBlobHelpers azureBlobHelpers)
         {
             _logger = logger;
-            _configuration = configuration;
+            _functionOptions = options.Value;
             _serviceBusHelpers = serviceBusHelpers;
             _azureBlobHelpers = azureBlobHelpers;
         }
 
         [FunctionName(nameof(ValidateActivityFile))]
-        public async Task Run([EventGridTrigger]EventGridEvent eventGridEvent)
+        public async Task Run([EventGridTrigger] EventGridEvent eventGridEvent)
         {
             try
             {
@@ -81,16 +81,16 @@ namespace MyHealth.FileValidator.Activity.Functions
                                     ActivityCalories = int.Parse(csv.GetField("Activity Calories"), NumberStyles.AllowThousands)
                                 };
 
-                                await _serviceBusHelpers.SendMessageToTopic(_configuration["ActivityTopic"], activity);
+                                await _serviceBusHelpers.SendMessageToTopic(_functionOptions.ActivityTopicSetting, activity);
                             }
                         }
                     }
                 }
             }
             catch (Exception ex)
-            {               
+            {
                 _logger.LogError($"Exception thrown in {nameof(ValidateActivityFile)}. Exception: {ex.Message}");
-                await _serviceBusHelpers.SendMessageToTopic(_configuration["ExceptionTopicName"], ex);
+                await _serviceBusHelpers.SendMessageToTopic(_functionOptions.ExceptionTopicSetting, ex);
             }
         }
     }
