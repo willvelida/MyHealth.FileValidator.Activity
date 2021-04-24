@@ -87,8 +87,8 @@ namespace MyHealth.FileValidator.Activity.Functions
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Exception thrown in {nameof(ValidateActivityFile)}. Exception: {ex.Message}");
-                await _serviceBusHelpers.SendMessageToTopic(_configuration["ExceptionTopicName"], ex);
+                _logger.LogError($"Exception thrown in {nameof(ValidateActivityFile)}. Exception: {ex}");
+                throw ex;
             }
         }
     }
