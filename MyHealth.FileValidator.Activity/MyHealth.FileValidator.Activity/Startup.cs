@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using MyHealth.Common;
 using MyHealth.FileValidator.Activity;
-using MyHealth.FileValidator.Activity.Helpers;
 using System.IO;
 
 [assembly: FunctionsStartup(typeof(Startup))]
@@ -19,24 +18,19 @@ namespace MyHealth.FileValidator.Activity
                 .AddEnvironmentVariables()
                 .Build();
 
-            //builder.Services.AddSingleton<IConfiguration>(config);
+            builder.Services.AddSingleton<IConfiguration>(config);
             builder.Services.AddLogging();
 
-            builder.Services.AddOptions<FunctionOptions>().Configure<IConfiguration>((settings, configuration) =>
+            builder.Services.AddSingleton(sp =>
             {
-                configuration.GetSection("FunctionOptions").Bind(settings);
+                IConfiguration config = sp.GetService<IConfiguration>();
+                return new ServiceBusHelpers(config["ServiceBusConnectionString"]);
             });
 
             builder.Services.AddSingleton(sp =>
             {
                 IConfiguration config = sp.GetService<IConfiguration>();
-                return new ServiceBusHelpers(config.GetConnectionString("ServiceBusConnectionString"));
-            });
-
-            builder.Services.AddSingleton(sp =>
-            {
-                IConfiguration config = sp.GetService<IConfiguration>();
-                return new AzureBlobHelpers(config.GetConnectionString("BlobStorageConnectionString"), config.GetConnectionString("MyHealthContainer"));
+                return new AzureBlobHelpers(config["BlobStorageConnectionString"], config["MyHealthContainer"]);
             });
         }
     }

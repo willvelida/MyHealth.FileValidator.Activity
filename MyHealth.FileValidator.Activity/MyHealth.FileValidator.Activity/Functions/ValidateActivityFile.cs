@@ -6,9 +6,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.EventGrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MyHealth.Common;
-using MyHealth.FileValidator.Activity.Helpers;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Globalization;
@@ -21,18 +19,18 @@ namespace MyHealth.FileValidator.Activity.Functions
     public class ValidateActivityFile
     {
         private readonly ILogger<ValidateActivityFile> _logger;
-        private readonly FunctionOptions _functionOptions;
+        private readonly IConfiguration _configuration;
         private readonly IServiceBusHelpers _serviceBusHelpers;
         private readonly IAzureBlobHelpers _azureBlobHelpers;
 
         public ValidateActivityFile(
             ILogger<ValidateActivityFile> logger,
-            IOptions<FunctionOptions> options,
+            IConfiguration configuration,
             IServiceBusHelpers serviceBusHelpers,
             IAzureBlobHelpers azureBlobHelpers)
         {
             _logger = logger;
-            _functionOptions = options.Value;
+            _configuration = configuration;
             _serviceBusHelpers = serviceBusHelpers;
             _azureBlobHelpers = azureBlobHelpers;
         }
@@ -81,7 +79,7 @@ namespace MyHealth.FileValidator.Activity.Functions
                                     ActivityCalories = int.Parse(csv.GetField("Activity Calories"), NumberStyles.AllowThousands)
                                 };
 
-                                await _serviceBusHelpers.SendMessageToTopic(_functionOptions.ActivityTopicSetting, activity);
+                                await _serviceBusHelpers.SendMessageToTopic(_configuration["ActivityTopic"], activity);
                             }
                         }
                     }
@@ -90,7 +88,7 @@ namespace MyHealth.FileValidator.Activity.Functions
             catch (Exception ex)
             {
                 _logger.LogError($"Exception thrown in {nameof(ValidateActivityFile)}. Exception: {ex.Message}");
-                await _serviceBusHelpers.SendMessageToTopic(_functionOptions.ExceptionTopicSetting, ex);
+                await _serviceBusHelpers.SendMessageToTopic(_configuration["ExceptionTopicName"], ex);
             }
         }
     }
