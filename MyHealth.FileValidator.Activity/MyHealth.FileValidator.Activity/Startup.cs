@@ -42,7 +42,7 @@ namespace MyHealth.FileValidator.Activity
             builder.Services.AddSingleton<ITableHelpers>(sp =>
             {
                 IConfiguration config = sp.GetService<IConfiguration>();
-                return new TableHelpers(config["BlobStorageConnectionString"], config["DuplicateActivityFilesTable"]);
+                return new TableHelpers(config["BlobStorageConnectionString"], config["DuplicateFilesTable"]);
             });
 
             builder.Services.AddScoped<IActivityRecordParser, ActivityRecordParser>();
