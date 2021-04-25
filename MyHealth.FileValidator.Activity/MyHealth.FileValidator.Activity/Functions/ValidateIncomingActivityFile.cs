@@ -36,13 +36,15 @@ namespace MyHealth.FileValidator.Activity.Functions
 
             try
             {
+                name = "activity_" + name;
                 ActivityFileEntity activityFileEntity = new ActivityFileEntity(name);
 
                 bool isDuplicate = await _tableHelpers.IsDuplicateAsync<ActivityFileEntity>(activityFileEntity.PartitionKey, activityFileEntity.RowKey);
 
                 if (isDuplicate == true)
                 {
-                    logger.LogInformation($"Duplicate file {activityFileEntity.RowKey} discarded");
+                    logger.LogInformation($"Duplicate file {activityFileEntity.RowKey} discarded. Deleting file from Blob Storage Container");
+                    await _azureBlobHelpers.DeleteBlobAsync(name);
                     return;
                 }
                 else
@@ -57,6 +59,10 @@ namespace MyHealth.FileValidator.Activity.Functions
                     logger.LogInformation("Insert file into duplicate table");
                     await _tableHelpers.InsertEntityAsync(activityFileEntity);
                     logger.LogInformation($"File {activityFileEntity.RowKey} inserted into table storage");
+
+                    logger.LogInformation($"Deleting {name} from Blob Storage");
+                    await _azureBlobHelpers.DeleteBlobAsync(name);
+                    logger.LogInformation($"File {name} has been deleted from Blob Storage");
                 }
             }
             catch (Exception ex)

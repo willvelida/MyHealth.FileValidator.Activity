@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using MyHealth.Common;
 using MyHealth.FileValidator.Activity.Functions;
-using MyHealth.FileValidator.Activity.Models;
 using MyHealth.FileValidator.Activity.Parsers;
 using System;
 using System.IO;
@@ -34,8 +33,8 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
             _mockLogger = new Mock<ILogger>();
 
             _func = new ValidateIncomingActivityFile(
-                _mockConfiguration.Object, 
-                _mockAzureBlobHelpers.Object, 
+                _mockConfiguration.Object,
+                _mockAzureBlobHelpers.Object,
                 _mockActivityRecordParser.Object,
                 _mockTableHelpers.Object);
         }
@@ -92,7 +91,22 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
 
             // Assert
             await functionAction.Should().NotThrowAsync<Exception>(It.IsAny<string>());
-            
+            _mockAzureBlobHelpers.Verify(x => x.DownloadBlobAsStreamAsync(It.IsAny<string>()), Times.Once);
+            _mockAzureBlobHelpers.Verify(x => x.DeleteBlobAsync(It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task DeleteFileFromBlobStorageWhenIsDuplicateAsyncReturnsTrue()
+        {
+            // Arrange
+            _mockTableHelpers.Setup(x => x.IsDuplicateAsync<TableEntity>(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(true);
+
+            // Act
+            Func<Task> functionAction = async () => await _func.Run(_mockStream.Object, "TestFileName", _mockLogger.Object);
+
+            // Assert
+            await functionAction.Should().NotThrowAsync<Exception>(It.IsAny<string>());
+            _mockAzureBlobHelpers.Verify(x => x.DeleteBlobAsync(It.IsAny<string>()), Times.Once);
         }
     }
 }
