@@ -1,59 +1,41 @@
-// Default URL for triggering event grid function in the local environment.
-// http://localhost:7071/runtime/webhooks/EventGrid?functionName={functionname}
-using CsvHelper;
-using Microsoft.Azure.EventGrid.Models;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.EventGrid;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using MyHealth.Common;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
+using CsvHelper;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using MyHealth.Common;
 using mdl = MyHealth.Common.Models;
 
 namespace MyHealth.FileValidator.Activity.Functions
 {
-    public class ValidateActivityFile
+    public class ValidateIncomingActivityFile
     {
-        private readonly ILogger<ValidateActivityFile> _logger;
         private readonly IConfiguration _configuration;
         private readonly IServiceBusHelpers _serviceBusHelpers;
         private readonly IAzureBlobHelpers _azureBlobHelpers;
 
-        public ValidateActivityFile(
-            ILogger<ValidateActivityFile> logger,
+        public ValidateIncomingActivityFile(
             IConfiguration configuration,
             IServiceBusHelpers serviceBusHelpers,
             IAzureBlobHelpers azureBlobHelpers)
         {
-            _logger = logger;
             _configuration = configuration;
             _serviceBusHelpers = serviceBusHelpers;
             _azureBlobHelpers = azureBlobHelpers;
         }
 
-        [FunctionName(nameof(ValidateActivityFile))]
-        public async Task Run([EventGridTrigger] EventGridEvent eventGridEvent)
+        [FunctionName(nameof(ValidateIncomingActivityFile))]
+        public async Task Run([BlobTrigger("myhealthfiles/{name}", Connection = "BlobStorageConnectionString")]Stream myBlob, string name, ILogger logger)
         {
+            logger.LogInformation($"C# Blob trigger function Processed blob\n Name:{name} \n Size: {myBlob.Length} Bytes");
+
             try
             {
-                // Get the incoming data from event grid
-                var eventData = JObject.Parse(eventGridEvent.Data.ToString());
-                var fileUrlToken = eventData["url"];
-
-                if (fileUrlToken == null)
-                {
-                    throw new ApplicationException("Activity File Url is missing from the incoming event");
-                }
-
-                string fileUrl = fileUrlToken.ToString();
-                var receivedActivityBlobName = "activity/" + Path.GetFileName(fileUrl);
-
-                // Get the Blob URL
-                using (var inputStream = await _azureBlobHelpers.DownloadBlobAsStreamAsync(receivedActivityBlobName))
+                using (var inputStream = await _azureBlobHelpers.DownloadBlobAsStreamAsync(name))
                 {
                     inputStream.Seek(0, SeekOrigin.Begin);
 
@@ -78,8 +60,9 @@ namespace MyHealth.FileValidator.Activity.Functions
                                     MinutesVeryActive = int.Parse(csv.GetField("Minutes Very Active"), NumberStyles.AllowThousands),
                                     ActivityCalories = int.Parse(csv.GetField("Activity Calories"), NumberStyles.AllowThousands)
                                 };
-
+                              
                                 await _serviceBusHelpers.SendMessageToTopic(_configuration["ActivityTopic"], activity);
+                                logger.LogInformation($"Activity Message for {activity.ActivityDate} has been sent");
                             }
                         }
                     }
@@ -87,7 +70,7 @@ namespace MyHealth.FileValidator.Activity.Functions
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Exception thrown in {nameof(ValidateActivityFile)}. Exception: {ex}");
+                logger.LogError($"Exception thrown in {nameof(ValidateIncomingActivityFile)}. Exception: {ex}");
                 throw ex;
             }
         }
