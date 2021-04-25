@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using MyHealth.Common;
 using MyHealth.FileValidator.Activity;
 using MyHealth.FileValidator.Activity.Functions;
+using MyHealth.FileValidator.Activity.Parsers;
 using System.IO;
 
 [assembly: FunctionsStartup(typeof(Startup))]
@@ -37,6 +38,8 @@ namespace MyHealth.FileValidator.Activity
                 IConfiguration config = sp.GetService<IConfiguration>();
                 return new AzureBlobHelpers(config["BlobStorageConnectionString"], config["MyHealthContainer"]);
             });
+
+            builder.Services.AddScoped<IActivityRecordParser, ActivityRecordParser>();
         }
     }
 }

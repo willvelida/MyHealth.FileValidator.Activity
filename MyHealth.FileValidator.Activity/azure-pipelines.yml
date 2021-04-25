@@ -34,6 +34,12 @@ stages:
               command: 'build'
               projects: '**/*.csproj'
               arguments: --configuration $(buildConfiguration)
+
+          - task: DotNetCoreCLI@2
+            displayName: Run Unit Tests
+            inputs:
+              command: 'test'
+              projects: '**/*UnitTests/*.csproj'
     
           - task: DotNetCoreCLI@2
             displayName: Publish
@@ -80,6 +86,6 @@ stages:
                     appType: functionApp
                     WebAppName: $(functionAppName)                   
                     package: '$(Pipeline.Workspace)/drop/MyHealth.FileValidator.Activity.zip'
-                    appSettings: '-FUNCTIONS_WORKER_RUNTIME "dotnet" -FUNCTIONS_EXTENSION_VERSION "~3" -ActivityTopic "myhealthactivitytopic" -ExceptionTopicName "myhealthexceptiontopic" -BlobStorageConnectionString "$(azurestorageconnectionstring)" -ServiceBusConnectionString "$(servicebusstorageconnectionstring)" -APPINSIGHTS_INSTRUMENTATIONKEY "2fc597df-fc6b-4b20-ac9c-ee7240b70704" -FunctionOptions:MyHealthContainer "myhealthfiles"'
+                    appSettings: '-FUNCTIONS_WORKER_RUNTIME "dotnet" -FUNCTIONS_EXTENSION_VERSION "~3" -ActivityTopic "myhealthactivitytopic" -BlobStorageConnectionString "$(azurestorageconnectionstring)" -ServiceBusConnectionString "$(servicebusstorageconnectionstring)" -APPINSIGHTS_INSTRUMENTATIONKEY "2fc597df-fc6b-4b20-ac9c-ee7240b70704" -MyHealthContainer "myhealthfiles"'
                     enableCustomDeployment: true
                     RemoveAdditionalFilesFlag: true
