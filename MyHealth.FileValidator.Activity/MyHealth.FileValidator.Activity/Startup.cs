@@ -39,6 +39,12 @@ namespace MyHealth.FileValidator.Activity
                 return new AzureBlobHelpers(config["BlobStorageConnectionString"], config["MyHealthContainer"]);
             });
 
+            builder.Services.AddSingleton<ITableHelpers>(sp =>
+            {
+                IConfiguration config = sp.GetService<IConfiguration>();
+                return new TableHelpers(config["BlobStorageConnectionString"], config["DuplicateActivityFilesTable"]);
+            });
+
             builder.Services.AddScoped<IActivityRecordParser, ActivityRecordParser>();
         }
     }

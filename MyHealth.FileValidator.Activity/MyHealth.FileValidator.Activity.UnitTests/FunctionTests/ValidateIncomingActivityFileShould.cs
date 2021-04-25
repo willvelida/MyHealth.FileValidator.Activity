@@ -1,9 +1,11 @@
 ﻿using FluentAssertions;
+using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using MyHealth.Common;
 using MyHealth.FileValidator.Activity.Functions;
+using MyHealth.FileValidator.Activity.Models;
 using MyHealth.FileValidator.Activity.Parsers;
 using System;
 using System.IO;
@@ -17,6 +19,7 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
         private Mock<IConfiguration> _mockConfiguration;
         private Mock<IAzureBlobHelpers> _mockAzureBlobHelpers;
         private Mock<IActivityRecordParser> _mockActivityRecordParser;
+        private Mock<ITableHelpers> _mockTableHelpers;
         private Mock<Stream> _mockStream;
         private Mock<ILogger> _mockLogger;
         private ValidateIncomingActivityFile _func;
@@ -26,16 +29,22 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
             _mockConfiguration = new Mock<IConfiguration>();
             _mockAzureBlobHelpers = new Mock<IAzureBlobHelpers>();
             _mockActivityRecordParser = new Mock<IActivityRecordParser>();
+            _mockTableHelpers = new Mock<ITableHelpers>();
             _mockStream = new Mock<Stream>();
             _mockLogger = new Mock<ILogger>();
 
-            _func = new ValidateIncomingActivityFile(_mockConfiguration.Object, _mockAzureBlobHelpers.Object, _mockActivityRecordParser.Object);
+            _func = new ValidateIncomingActivityFile(
+                _mockConfiguration.Object, 
+                _mockAzureBlobHelpers.Object, 
+                _mockActivityRecordParser.Object,
+                _mockTableHelpers.Object);
         }
 
         [Fact]
         public async Task CatchAndLogExceptionWhenDownloadBlobAsStreamAsyncThrowsException()
         {
             // Arrange
+            _mockTableHelpers.Setup(x => x.IsDuplicateAsync<TableEntity>(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
             _mockAzureBlobHelpers.Setup(x => x.DownloadBlobAsStreamAsync(It.IsAny<string>())).ThrowsAsync(It.IsAny<Exception>());
 
             // Act
@@ -50,6 +59,19 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
         {
             // Arrange
             _mockActivityRecordParser.Setup(x => x.ParseActivityStream(It.IsAny<Stream>())).ThrowsAsync(It.IsAny<Exception>());
+
+            // Act
+            Func<Task> functionAction = async () => await _func.Run(_mockStream.Object, "TestFileName", _mockLogger.Object);
+
+            // Assert
+            await functionAction.Should().ThrowAsync<Exception>(It.IsAny<string>());
+        }
+
+        [Fact]
+        public async Task CatchAndLogExceptionWhenIsDuplicateAsyncThrowsException()
+        {
+            // Arrage
+            _mockTableHelpers.Setup(x => x.IsDuplicateAsync<TableEntity>(It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(It.IsAny<Exception>());
 
             // Act
             Func<Task> functionAction = async () => await _func.Run(_mockStream.Object, "TestFileName", _mockLogger.Object);
