@@ -18,6 +18,7 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
         private Mock<IConfiguration> _mockConfiguration;
         private Mock<IAzureBlobHelpers> _mockAzureBlobHelpers;
         private Mock<IActivityRecordParser> _mockActivityRecordParser;
+        private Mock<IServiceBusHelpers> _mockServiceBusHelpers;
         private Mock<ITableHelpers> _mockTableHelpers;
         private Mock<Stream> _mockStream;
         private Mock<ILogger> _mockLogger;
@@ -28,6 +29,7 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
             _mockConfiguration = new Mock<IConfiguration>();
             _mockAzureBlobHelpers = new Mock<IAzureBlobHelpers>();
             _mockActivityRecordParser = new Mock<IActivityRecordParser>();
+            _mockServiceBusHelpers = new Mock<IServiceBusHelpers>();
             _mockTableHelpers = new Mock<ITableHelpers>();
             _mockStream = new Mock<Stream>();
             _mockLogger = new Mock<ILogger>();
@@ -36,6 +38,7 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
                 _mockConfiguration.Object,
                 _mockAzureBlobHelpers.Object,
                 _mockActivityRecordParser.Object,
+                _mockServiceBusHelpers.Object,
                 _mockTableHelpers.Object);
         }
 
@@ -44,13 +47,14 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
         {
             // Arrange
             _mockTableHelpers.Setup(x => x.IsDuplicateAsync<TableEntity>(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
-            _mockAzureBlobHelpers.Setup(x => x.DownloadBlobAsStreamAsync(It.IsAny<string>())).ThrowsAsync(It.IsAny<Exception>());
+            _mockAzureBlobHelpers.Setup(x => x.DownloadBlobAsStreamAsync(It.IsAny<string>())).ThrowsAsync(It.IsAny<Exception>());           
 
             // Act
             Func<Task> functionAction = async () => await _func.Run(_mockStream.Object, "TestFileName", _mockLogger.Object);
 
             // Assert
             await functionAction.Should().ThrowAsync<Exception>(It.IsAny<string>());
+            _mockServiceBusHelpers.Verify(x => x.SendMessageToQueue(It.IsAny<string>(), It.IsAny<Exception>()), Times.Once);
         }
 
         [Fact]
@@ -64,6 +68,7 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
 
             // Assert
             await functionAction.Should().ThrowAsync<Exception>(It.IsAny<string>());
+            _mockServiceBusHelpers.Verify(x => x.SendMessageToQueue(It.IsAny<string>(), It.IsAny<Exception>()), Times.Once);
         }
 
         [Fact]
@@ -77,6 +82,7 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
 
             // Assert
             await functionAction.Should().ThrowAsync<Exception>(It.IsAny<string>());
+            _mockServiceBusHelpers.Verify(x => x.SendMessageToQueue(It.IsAny<string>(), It.IsAny<Exception>()), Times.Once);
         }
 
         [Fact]
@@ -93,6 +99,7 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
             await functionAction.Should().NotThrowAsync<Exception>(It.IsAny<string>());
             _mockAzureBlobHelpers.Verify(x => x.DownloadBlobAsStreamAsync(It.IsAny<string>()), Times.Once);
             _mockAzureBlobHelpers.Verify(x => x.DeleteBlobAsync(It.IsAny<string>()), Times.Once);
+            _mockServiceBusHelpers.Verify(x => x.SendMessageToQueue(It.IsAny<string>(), It.IsAny<Exception>()), Times.Never);
         }
 
         [Fact]
@@ -107,6 +114,7 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
             // Assert
             await functionAction.Should().NotThrowAsync<Exception>(It.IsAny<string>());
             _mockAzureBlobHelpers.Verify(x => x.DeleteBlobAsync(It.IsAny<string>()), Times.Once);
+            _mockServiceBusHelpers.Verify(x => x.SendMessageToQueue(It.IsAny<string>(), It.IsAny<Exception>()), Times.Never);
         }
     }
 }

@@ -15,17 +15,20 @@ namespace MyHealth.FileValidator.Activity.Functions
         private readonly IConfiguration _configuration;
         private readonly IAzureBlobHelpers _azureBlobHelpers;
         private readonly IActivityRecordParser _activityRecordParser;
+        private readonly IServiceBusHelpers _serviceBusHelpers;
         private readonly ITableHelpers _tableHelpers;
 
         public ValidateIncomingActivityFile(
             IConfiguration configuration,
             IAzureBlobHelpers azureBlobHelpers,
             IActivityRecordParser activityRecordParser,
+            IServiceBusHelpers serviceBusHelpers,
             ITableHelpers tableHelpers)
         {
             _configuration = configuration;
             _azureBlobHelpers = azureBlobHelpers;
             _activityRecordParser = activityRecordParser;
+            _serviceBusHelpers = serviceBusHelpers;
             _tableHelpers = tableHelpers;
         }
 
@@ -68,6 +71,7 @@ namespace MyHealth.FileValidator.Activity.Functions
             catch (Exception ex)
             {
                 logger.LogError($"Exception thrown in {nameof(ValidateIncomingActivityFile)}. Exception: {ex}");
+                await _serviceBusHelpers.SendMessageToQueue(_configuration["ExceptionQueue"], ex);
                 throw ex;
             }
         }
