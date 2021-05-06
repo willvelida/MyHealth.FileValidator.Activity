@@ -47,7 +47,7 @@ namespace MyHealth.FileValidator.Activity.UnitTests.FunctionTests
         {
             // Arrange
             _mockTableHelpers.Setup(x => x.IsDuplicateAsync<TableEntity>(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(false);
-            _mockAzureBlobHelpers.Setup(x => x.DownloadBlobAsStreamAsync(It.IsAny<string>())).ThrowsAsync(It.IsAny<Exception>());           
+            _mockAzureBlobHelpers.Setup(x => x.DownloadBlobAsStreamAsync(It.IsAny<string>())).ThrowsAsync(It.IsAny<Exception>());
 
             // Act
             Func<Task> functionAction = async () => await _func.Run(_mockStream.Object, "TestFileName", _mockLogger.Object);
