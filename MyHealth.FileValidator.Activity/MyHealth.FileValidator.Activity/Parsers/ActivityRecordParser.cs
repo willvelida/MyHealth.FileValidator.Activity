@@ -38,7 +38,7 @@ namespace MyHealth.FileValidator.Activity.Parsers
                         {
                             var activity = new mdl.Activity
                             {
-                                ActivityDate = DateTime.Parse(csv.GetField("Date")).ToString("yyyy-MM-dd"),
+                                ActivityDate = ParseActivityDate(csv.GetField("Date")),
                                 CaloriesBurned = int.Parse(csv.GetField("Calories Burned"), NumberStyles.AllowThousands),
                                 Steps = int.Parse(csv.GetField("Steps"), NumberStyles.AllowThousands),
                                 Distance = double.Parse(csv.GetField("Distance")),
@@ -59,6 +59,13 @@ namespace MyHealth.FileValidator.Activity.Parsers
             {
                 throw ex;
             }
+        }
+
+        private string ParseActivityDate(string activityDate)
+        {
+            DateTime activityDateToDateTime = DateTime.ParseExact(activityDate, "d/MM/yyyy", null);
+            string parsedActivityDate = activityDateToDateTime.ToString("yyyy-MM-dd");
+            return parsedActivityDate;
         }
     }
 }
